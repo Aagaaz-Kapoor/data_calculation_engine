@@ -95,32 +95,60 @@ with st.sidebar:
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.header("📋 Data Store")
+    st.header("📋 Data Store - All Categories")
     
-    # Display data in tabs
-    tabs = st.tabs(["Business", "Financial", "Cost", "Other"])
+    # Display all data in a single view organized by category
+    all_empty = all(st.session_state.data_store[cat].empty for cat in ['business', 'financial', 'cost', 'other'])
     
-    for idx, (cat_key, tab) in enumerate(zip(['business', 'financial', 'cost', 'other'], tabs)):
-        with tab:
+    if not all_empty:
+        category_colors = {
+            'business': '🟦',
+            'financial': '🟩',
+            'cost': '🟨',
+            'other': '🟪'
+        }
+        
+        for cat_key in ['business', 'financial', 'cost', 'other']:
             df = st.session_state.data_store[cat_key]
             
             if not df.empty:
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.subheader(f"{category_colors[cat_key]} {cat_key.capitalize()} Data ({len(df)} items)")
                 
-                # Delete functionality
-                st.subheader("Delete Entry")
-                if len(df) > 0:
-                    entry_to_delete = st.selectbox(
-                        "Select entry to delete",
-                        df['Display Name'].tolist(),
-                        key=f"delete_{cat_key}"
-                    )
-                    if st.button(f"🗑️ Delete", key=f"del_btn_{cat_key}"):
-                        st.session_state.data_store[cat_key] = df[df['Display Name'] != entry_to_delete]
-                        st.success(f"✅ Deleted '{entry_to_delete}'")
-                        st.rerun()
-            else:
-                st.info(f"No {cat_key} data yet. Add some data to get started!")
+                # Create a container for each category
+                with st.container():
+                    # Display the dataframe
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+                    
+                    # Add to formula buttons for each entry
+                    cols_buttons = st.columns(min(len(df), 4))
+                    for idx, (_, row) in enumerate(df.iterrows()):
+                        with cols_buttons[idx % 4]:
+                            if st.button(
+                                f"➕ {row['Display Name']}", 
+                                key=f"add_formula_{cat_key}_{idx}",
+                                use_container_width=True
+                            ):
+                                st.session_state.formula += f"{{{row['Display Name']}}}"
+                                st.rerun()
+                    
+                    # Delete functionality
+                    col_del1, col_del2 = st.columns([3, 1])
+                    with col_del1:
+                        entry_to_delete = st.selectbox(
+                            "Delete entry",
+                            df['Display Name'].tolist(),
+                            key=f"delete_{cat_key}",
+                            label_visibility="collapsed"
+                        )
+                    with col_del2:
+                        if st.button(f"🗑️ Delete", key=f"del_btn_{cat_key}"):
+                            st.session_state.data_store[cat_key] = df[df['Display Name'] != entry_to_delete]
+                            st.success(f"✅ Deleted '{entry_to_delete}'")
+                            st.rerun()
+                
+                st.divider()
+    else:
+        st.info("No data yet. Add some data using the sidebar to get started!")
 
 with col2:
     st.header("🔧 Calculation Engine")
@@ -128,55 +156,40 @@ with col2:
     # Formula builder
     st.subheader("Build Formula")
     
-    # Display available variables
-    st.markdown("**Available Variables (click to add to formula):**")
-    
-    cols_vars = st.columns(4)
-    for idx, (cat_key, cat_name) in enumerate(zip(['business', 'financial', 'cost', 'other'], 
-                                                    ['Business', 'Financial', 'Cost', 'Other'])):
-        with cols_vars[idx]:
-            st.markdown(f"**{cat_name}**")
-            df = st.session_state.data_store[cat_key]
-            if not df.empty:
-                for _, row in df.iterrows():
-                    if st.button(f"{row['Display Name']}", key=f"var_{cat_key}_{row['Display Name']}"):
-                        st.session_state.formula += f"{{{row['Display Name']}}}"
-                        st.rerun()
-            else:
-                st.caption("No data")
-    
-    st.divider()
-    
     # Operations
-    st.markdown("**Operations:**")
+    st.markdown("**Quick Operations:**")
     ops_col = st.columns(8)
     operations = ['+', '-', '*', '/', '%', '^', '(', ')']
     
     for idx, op in enumerate(operations):
         with ops_col[idx]:
-            if st.button(op, key=f"op_{op}"):
+            if st.button(op, key=f"op_{op}", use_container_width=True):
                 st.session_state.formula += op
                 st.rerun()
     
+    st.markdown("---")
+    
     # Formula input
     st.text_area("Formula", value=st.session_state.formula, height=100, key="formula_display", disabled=True)
+    
+    st.caption("💡 **Tip:** Click on any data item from the left panel to add it to your formula, then use operations above to build your calculation.")
     
     # Control buttons
     col_btn1, col_btn2, col_btn3 = st.columns(3)
     
     with col_btn1:
-        if st.button("🧹 Clear Formula"):
+        if st.button("🧹 Clear Formula", use_container_width=True):
             st.session_state.formula = ""
             st.session_state.calculation_result = None
             st.rerun()
     
     with col_btn2:
-        if st.button("⬅️ Backspace"):
+        if st.button("⬅️ Backspace", use_container_width=True):
             st.session_state.formula = st.session_state.formula[:-1]
             st.rerun()
     
     with col_btn3:
-        calculate_btn = st.button("✅ Calculate", type="primary")
+        calculate_btn = st.button("✅ Calculate", type="primary", use_container_width=True)
     
     # Calculate result
     if calculate_btn:

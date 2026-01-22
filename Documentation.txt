@@ -1,0 +1,8 @@
+This is a dashboard where you can access all type of data from different fields.
+And can perform some calculation by just clicking on the cell.
+
+I have even added a rent growth calculator where we can see a proper graph.
+
+How to run "streamlit run app4.py"
+
+There are multiple versions of the same app with a little bit changes just for documentation purposes.
